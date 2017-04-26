@@ -87,9 +87,10 @@ unsigned char* createBuffer(char *, int *);
 int findCluster(FatTable *);
 int* allocateClusters(FatTable *, int);
 int* seekCluster(int);
-int writeFile(VirtualDisk *, FatTable *, char *);
-int readFile(VirtualDisk *, FatTable *, char *);
+float writeFile(VirtualDisk *, FatTable *, char *);
+float readFile(VirtualDisk *, FatTable *, char *);
 int deleteFile(FatTable *, char *);
 void showFATTable(FatTable *);
+float computingTime(int*, int);
 
 #endif // CONTROLLER_h

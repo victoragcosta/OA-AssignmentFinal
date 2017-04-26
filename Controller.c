@@ -76,21 +76,13 @@ unsigned char* createBuffer(char *file_name, int *buffer_size){
     return buffer;
 }
 
-int findCluster(FatTable *fat){ //Localiza um cluster vazio (Frodo deu uma ideia de refatoração)
-    int i, j, sectors_counter = 0;
+int findCluster(FatTable *fat){ //Localiza um cluster vazio
+    int i, j;
+    
     for(i=0; i<sectors_amount; i+=cluster_size){
-        for(j=0; j<cluster_size; j++){
-            if(fat->entities[i+j].used == available){
-                sectors_counter++;
-            }
-            else
-                sectors_counter = 0;
-            if(sectors_counter == cluster_size){
-                for(j=0; j<cluster_size; j++){
-                    fat->entities[i+j].used = unavailable;
-                }
-                return i;
-            }
+        if(fat->entities[i].used == available){
+            fat->entities[i].used = unavailable;
+            return i;
         }
     }
     return disk_full;
@@ -119,11 +111,11 @@ int* seekCluster(int cluster_id){ //Localiza um cluster dentro do disco, em term
 }
 
 
-int writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
+float writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     unsigned char *buffer;
     int buffer_size, buffer_position = 0;
     int i, l, k, j; //Iterators
-    int write_time = 0; ///Falta implementar a parte de calculo dos tempos
+    float write_time = 0; ///Falta implementar a parte de calculo dos tempos
     int *clusters_allocated, clusters_needed; //Clusters access controllers
     int previous_cluster; //Holds the latest written cluster
     int *p; //Coordinates (cil, track, sector) of a cluster
@@ -137,6 +129,7 @@ int writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
 
     clusters_needed = (int) ceil(buffer_size/cluster_memory);
     clusters_allocated = allocateClusters(fat, clusters_needed);
+    write_time = computingTime(clusters_allocated, clusters_needed);
     if(clusters_allocated == ptr_disk_full)
         return disk_full;
 
@@ -184,9 +177,10 @@ int writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     return write_time;
 }
 
-int readFile(VirtualDisk *drive, FatTable *fat, char *file_name){
+float readFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     unsigned char *cluster_buffer = (unsigned char *) malloc(sector_size*sizeof(unsigned char));
-    int i, read_time = 0, current_sector, files_amount = fat->files[0].first_sector; ///Falta implementar a parte de calculo dos tempos
+    int i, current_sector, files_amount = fat->files[0].first_sector; ///Falta implementar a parte de calculo dos tempos
+    float  read_time = 0;
     int *p; //Coordinates of a cluster
     FILE *output_file;
     char output_name[address_size];
@@ -275,6 +269,22 @@ void showFATTable (FatTable *fat){ //Mostra toda a tabela FAT
 		}
 		memory_used++;
 		printf("%d.", current_sector);
-		printf("\nMemoria utilizada: %d bytes\n", memory_used*sector_size); //WARNING
+		printf("\nMemoria utilizada: %d bytes\n", memory_used*sector_size);
+        memory_used = 0;
 	}
+}
+
+float computingTime(int *sectors, int n){// Recebe o tamanho e o array de setores no qual o arquivo esta contido
+    int i;  //control variables
+    float tempo=0.0;
+    
+    for(i=0; i<(n-1); i++){
+        tempo += (float) average_latency + (transfer_time/sectors_per_track);
+        
+        if((sectors[i+1]-sectors[i])>300)
+            tempo += average_seek;
+    }
+    tempo += (float) average_latency + (transfer_time/sectors_per_track); //Tempo adicional para leitura do ultimo setor
+    
+    return tempo;
 }

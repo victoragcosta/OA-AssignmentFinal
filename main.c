@@ -4,7 +4,8 @@ int main(int argc, char **argv){
 
     VirtualDisk *disk0 = (VirtualDisk *) installDisk();
     FatTable *disk_fat0 = (FatTable *) start_Fat();
-    int time, flag;
+    float time;
+    int flag;
     char option;
     char file_name[address_size];
 
@@ -23,7 +24,7 @@ int main(int argc, char **argv){
     			else if(time == disk_full)
                     printf("O disco esta cheio\n");
                 else
-                    printf("O arquivo foi gravado com sucesso\nTempo de escrita: %d milisegundos\n", time);
+                    printf("O arquivo foi gravado com sucesso\nTempo de escrita: %.2f milisegundos\n", time);
                 system("PAUSE");
     		break;
     		case '2':
@@ -33,7 +34,7 @@ int main(int argc, char **argv){
                 if(time == missing_file)
                     printf("O arquivo nao foi encontrado ou esta corrompido\n");
     			else
-                    printf("Um arquivo com o identificador Output_filename foi gerado\nTempo de leitura: %d milisegundos\n", time);
+                    printf("Um arquivo com o identificador Output_filename foi gerado\nTempo de leitura: %.2f milisegundos\n", time);
                 system("PAUSE");
     		break;
     		case '3':
