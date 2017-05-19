@@ -31,7 +31,9 @@ FatTable* start_Fat(){ //Aloca e inicializa a FAT
     if(fat->entities == NULL)
         return corrupted_fat;
     for(i=0; i<sectors_amount; i++){
-        fat->entities[i].used = available;
+            fat->entities[i].used = unavailable;
+            fat->entities[i].used = available;
+        
         fat->entities[i].eof = not_eof_flag;
         fat->entities[i].next = missing_file;
     }
@@ -106,7 +108,8 @@ int* seekCluster(int cluster_id){ //Localiza um cluster dentro do disco, em term
     int *cluster_address = (int *) malloc(3*sizeof(int));
     cluster_address[0] = (int) floor(cluster_id/sectors_per_cylinder); //Cilindro p[0]
     cluster_address[1] = (int) floor((cluster_id-(cluster_address[0]*sectors_per_cylinder))/sectors_per_track); //Trilha p[1]
-    cluster_address[2] = (int) cluster_id - (cluster_address[0]*sectors_per_cylinder)+(cluster_address[1]*sectors_per_track); //Setor p[2]
+    //WARNING cluster_address[2] = (int) cluster_id - (cluster_address[0]*sectors_per_cylinder)+(cluster_address[1]*sectors_per_track); //Setor p[2]
+    printf("\n.......[%d][%d][%d].......\n", cluster_address[0], cluster_address[1], cluster_address[2]);
     return cluster_address;
 }
 
@@ -125,6 +128,8 @@ float writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     if(buffer == ptr_missing_file){
         return writing_failed;
     }
+    
+
     //Retrieve information from the disk FAT Table
 
     clusters_needed = (int) ceil(buffer_size/cluster_memory);
@@ -145,24 +150,29 @@ float writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     for(i=0; i<clusters_needed; i++){
     	if(i!= 0)
     		fat->entities[previous_cluster].next = clusters_allocated[i];
+        printf("\n1\n");
 
         previous_cluster = clusters_allocated[i];
-
+        
+        printf("\n2\n");
         for(l=0; l<cluster_size; l++){
             p = (int *)seekCluster(clusters_allocated[i]+l);
             for(k=buffer_position , j=0; ; k++ , j++){
-                drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[j] = buffer[k];
+                drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[j]=buffer[k];
                 if(k==buffer_size || j==(sector_size-2))
                     break;
             }
+            printf("\n3\n");
             buffer_position = k+1;
             if(j == (sector_size-2)){
-                drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[sector_size-1] = '\0';
+                printf("\n4\n");
+//                 drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[sector_size-1] = '\0';
                 fat->entities[previous_cluster].next = clusters_allocated[i]+l;
                 previous_cluster = clusters_allocated[i]+l;
             }
             if(k == buffer_size){
-                drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[j] = '\0';
+                printf("\n5\n");
+//                 drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[j] = '\0';
                 fat->entities[previous_cluster].next = clusters_allocated[i]+l;
                 fat->entities[clusters_allocated[i]+l].eof = eof_flag;
                 break;
