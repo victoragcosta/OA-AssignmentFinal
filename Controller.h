@@ -68,7 +68,7 @@ typedef struct fatent{ //Defines the state of each sector
     unsigned int next;
 }FatEnt;
 
-typedef struct fatfiles{ //Defines the address of
+typedef struct fatfiles{ //Defines the address of a file
     char file_name[address_size];
     unsigned int first_sector;
 }FatFiles;
@@ -78,11 +78,35 @@ typedef struct fattable{ //Defines the disk's FAT Table
     FatFiles *files;
 }FatTable;
 
-
+/**
+*   installDisk();
+*   This function is responsible for the allocation of the memory that will be used to the disk structure
+*   @return : VirtualDisk pointer type, pointing to the just allocated memory area.
+*/
 VirtualDisk* installDisk();
+
+/**
+*   uninstallDisk();
+*   This function does the opposite of installDisk, releasing all the allocated memory for the disk
+*   @args : VirtualDisk pointer type, pointing to the disk to be "destroyed".
+*/
 void uninstallDisk(VirtualDisk *);
-FatTable* start_Fat();
-void finish_Fat(FatTable *);
+
+/**
+*   startFat();
+*   Allocates and starts the FAT Table with the appropriated constants
+*   @return : FatTable pointer type, pointing to the just allocated memory area
+*/
+FatTable* startFat();
+
+/**
+*   finishFat();
+*   Releases all the memory used for the FAT Table
+*   @args : FatTable pointer type containing the FAT Table to be "destroyed"
+*/
+void finishFat(FatTable *);
+
+
 unsigned char* createBuffer(char *, int *);
 int findCluster(FatTable *);
 int* allocateClusters(FatTable *, int);
@@ -90,6 +114,7 @@ int* seekCluster(int);
 int writeFile(VirtualDisk *, FatTable *, char *);
 int readFile(VirtualDisk *, FatTable *, char *);
 int deleteFile(FatTable *, char *);
+
 void showFATTable(FatTable *);
 
 #endif // CONTROLLER_h

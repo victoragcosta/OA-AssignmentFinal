@@ -17,7 +17,7 @@ void uninstallDisk(VirtualDisk *disk){ //Libera toda a memória do disco
     free(disk);
 }
 
-FatTable* start_Fat(){ //Aloca e inicializa a FAT
+FatTable* startFat(){ //Aloca e inicializa a FAT
     int i;
     FatTable *fat = (FatTable *) malloc(sizeof(FatTable));
     if(fat == NULL)
@@ -38,7 +38,7 @@ FatTable* start_Fat(){ //Aloca e inicializa a FAT
     return fat;
 }
 
-void finish_Fat(FatTable *fat){ //Libera a memória da FAT
+void finishFat(FatTable *fat){ //Libera a memória da FAT
     free(fat->entities);
     free(fat->files);
     free(fat);
@@ -76,7 +76,7 @@ unsigned char* createBuffer(char *file_name, int *buffer_size){
     return buffer;
 }
 
-int findCluster(FatTable *fat){ //Localiza um cluster vazio (Frodo deu uma ideia de refatoração)
+int findCluster(FatTable *fat){ //Localiza um cluster vazio
     int i, j, sectors_counter = 0;
     for(i=0; i<sectors_amount; i+=cluster_size){
         for(j=0; j<cluster_size; j++){
@@ -117,7 +117,6 @@ int* seekCluster(int cluster_id){ //Localiza um cluster dentro do disco, em term
     cluster_address[2] = (int) cluster_id - ((cluster_address[0]*sectors_per_cylinder)+(cluster_address[1]*sectors_per_track)); //Setor p[2]
     return cluster_address;
 }
-
 
 int writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     unsigned char *buffer;
@@ -275,6 +274,7 @@ void showFATTable (FatTable *fat){ //Mostra toda a tabela FAT
 		}
 		memory_used++;
 		printf("%d.", current_sector);
-		printf("\nMemoria utilizada: %d bytes\n", memory_used*sector_size); //WARNING
+		printf("\nMemoria utilizada: %d bytes\n", memory_used*sector_size);
+		memory_used = 0;
 	}
 }
