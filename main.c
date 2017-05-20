@@ -5,29 +5,28 @@ int main(int argc, char **argv){
 
     VirtualDisk *disk0 = (VirtualDisk *) installDisk();
     FatTable *disk_fat0 = (FatTable *) startFat();
-    int time, flag;
-    char option = '1';
-    char file_name[address_size] = "Teste7.txt";
+    double time;
+    int flag;
+    char option;
+    char file_name[address_size];
 
     do{
-    	//system("cls");
+    	system("cls");
     	printf("\n1. Gravar um arquivo\n2. Ler um arquivo\n3. Deletar um arquivo\n4. Mostrar a tabela FAT do disco\n5. Sair\n");
-    	//scanf("%c", &option);
-    	//getchar();
+    	scanf("%c", &option);
+    	getchar();
     	switch(option){
     		case '1':
-    			//printf("Insira o nome do arquivo a ser gravado: ");
-    			//gets(file_name);
+    			printf("Insira o nome do arquivo a ser gravado: ");
+    			gets(file_name);
     			time = writeFile(disk0, disk_fat0, file_name);
     			if(time == writing_failed)
                     printf("O arquivo nao pode ser gravado\n");
-    			else if(time == disk_full){
+    			else if(time == disk_full)
                     printf("O disco esta cheio\n");
-                    option = '4';
-    			}
                 else
-                    printf("O arquivo foi gravado com sucesso\nTempo de escrita: %d milisegundos\n", time);
-                //system("PAUSE");
+                    printf("O arquivo foi gravado com sucesso\nTempo de escrita: %.3lf milisegundos\n", time);
+                system("PAUSE");
     		break;
     		case '2':
     			printf("Insira o nome do arquivo a ser lido: ");
@@ -36,7 +35,7 @@ int main(int argc, char **argv){
                 if(time == missing_file)
                     printf("O arquivo nao foi encontrado ou esta corrompido\n");
     			else
-                    printf("Um arquivo com o identificador Output_filename foi gerado\nTempo de leitura: %d milisegundos\n", time);
+                    printf("Um arquivo com o identificador Output_filename foi gerado\nTempo de leitura: %.3lf milisegundos\n", time);
                 system("PAUSE");
     		break;
     		case '3':
@@ -51,7 +50,6 @@ int main(int argc, char **argv){
     		break;
     		case '4':
     			showFATTable(disk_fat0);
-    			option = '5';
     			system("PAUSE");
     		break;
     		case '5':

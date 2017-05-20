@@ -19,6 +19,7 @@ void uninstallDisk(VirtualDisk *disk){ //Libera toda a memória do disco
 
 FatTable* startFat(){ //Aloca e inicializa a FAT
     int i;
+
     FatTable *fat = (FatTable *) malloc(sizeof(FatTable));
     if(fat == NULL)
         return corrupted_fat;
@@ -77,20 +78,12 @@ unsigned char* createBuffer(char *file_name, int *buffer_size){
 }
 
 int findCluster(FatTable *fat){ //Localiza um cluster vazio
-    int i, j, sectors_counter = 0;
+    int i;
+
     for(i=0; i<sectors_amount; i+=cluster_size){
-        for(j=0; j<cluster_size; j++){
-            if(fat->entities[i+j].used == available){
-                sectors_counter++;
-            }
-            else
-                sectors_counter = 0;
-            if(sectors_counter == cluster_size){
-                for(j=0; j<cluster_size; j++){
-                    fat->entities[i+j].used = unavailable;
-                }
-                return i;
-            }
+        if(fat->entities[i].used == available){
+            fat->entities[i].used = unavailable;
+            return i;
         }
     }
     return disk_full;
@@ -118,26 +111,28 @@ int* seekCluster(int cluster_id){ //Localiza um cluster dentro do disco, em term
     return cluster_address;
 }
 
-int writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
+double writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     unsigned char *buffer;
     int buffer_size, buffer_position = 0;
     int i, l, k, j; //Iterators
-    int write_time = 0; ///Falta implementar a parte de calculo dos tempos
-    int *clusters_allocated, clusters_needed; //Clusters access controllers
-    int previous_cluster; //Holds the latest written cluster
+    int *clusters_allocated, clusters_needed, previous_cluster; //Clusters access controllers
     int *p; //Coordinates (cil, track, sector) of a cluster
+    double write_time = 0;
 
     //Retrieve file and build buffer
     buffer = createBuffer(file_name, &buffer_size);
     if(buffer == ptr_missing_file){
         return writing_failed;
     }
-    //Retrieve information from the disk FAT Table
+
+    //Compute the necessary space in disk
 
     clusters_needed = (int) ceil(buffer_size/cluster_memory);
     clusters_allocated = allocateClusters(fat, clusters_needed);
     if(clusters_allocated == ptr_disk_full)
         return disk_full;
+
+    write_time = computingTime(clusters_allocated, clusters_needed);
 
     //Write file in FAT Table
 
@@ -156,19 +151,22 @@ int writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
 
         for(l=0; l<cluster_size; l++){
             p = (int *)seekCluster(clusters_allocated[i]+l);
-            for(k=buffer_position , j=0; ; k++ , j++){
+            for(k = buffer_position , j=0; ; k++ , j++){
                 drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[j] = buffer[k];
                 if(k==buffer_size || j==(sector_size-2))
                     break;
             }
+            printf("Cil: %d\tTrack: %d\tSector: %d\n", p[0], p[1], p[2]); //WARNING
             buffer_position = k+1;
             if(j == (sector_size-2)){
                 drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[sector_size-1] = '\0';
+                puts(drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes); //WARNING
                 fat->entities[previous_cluster].next = clusters_allocated[i]+l;
                 previous_cluster = clusters_allocated[i]+l;
             }
             if(k == buffer_size){
                 drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes[j] = '\0';
+                puts(drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes); //WARNING
                 fat->entities[previous_cluster].next = clusters_allocated[i]+l;
                 fat->entities[clusters_allocated[i]+l].eof = eof_flag;
                 break;
@@ -183,12 +181,14 @@ int writeFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     return write_time;
 }
 
-int readFile(VirtualDisk *drive, FatTable *fat, char *file_name){
+double readFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     unsigned char *cluster_buffer = (unsigned char *) malloc(sector_size*sizeof(unsigned char));
-    int i, read_time = 0, current_sector, files_amount = fat->files[0].first_sector; ///Falta implementar a parte de calculo dos tempos
+    char output_name[address_size];
+    int i, current_sector, files_amount = fat->files[0].first_sector;
+    int *sectors_used, sectors_needed = 1, cluster_flag = 1;
     int *p; //Coordinates of a cluster
     FILE *output_file;
-    char output_name[address_size];
+    double read_time = 0;
 
     //Search FAT Table for file
 
@@ -202,6 +202,8 @@ int readFile(VirtualDisk *drive, FatTable *fat, char *file_name){
     //Opens the output file
 
     current_sector = fat->files[i].first_sector;
+    sectors_used = (int *) malloc(sectors_needed*sizeof(int));
+    sectors_used[0] = current_sector;
     strcpy(output_name, "Output_");
     strcat(output_name, file_name);
     output_file = fopen(output_name, "w");
@@ -210,17 +212,30 @@ int readFile(VirtualDisk *drive, FatTable *fat, char *file_name){
 
     while (fat->entities[current_sector].eof != eof_flag){
         p = seekCluster(current_sector);
+        if(cluster_flag == cluster_size){
+            sectors_used = (int *) realloc(sectors_used, (sectors_needed+1)*sizeof(int));
+            sectors_used[sectors_needed] = current_sector;
+            sectors_needed++;
+            cluster_flag = 0;
+        }
         strcpy(cluster_buffer, drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes);
+        printf("Cil: %d\tTrack: %d\tSector: %d\n", p[0], p[1], p[2]);
         fprintf(output_file, "%s", cluster_buffer);
         current_sector = fat->entities[current_sector].next;
+        cluster_flag++;
         free(p);
     }
     p = seekCluster(current_sector);
+    sectors_used[sectors_needed-1] = current_sector;
     strcpy(cluster_buffer, drive->disk_cylinders[p[0]].cylinder_tracks[p[1]].track_sectors[p[2]].sector_bytes);
+    printf("Cil: %d\tTrack: %d\tSector: %d\n", p[0], p[1], p[2]);
     fprintf(output_file, "%s", cluster_buffer);
     cluster_buffer = (unsigned char *) memset(cluster_buffer, '\0', sector_size);
     free(p);
 
+    read_time = computingTime(sectors_used, sectors_needed);
+
+    free(sectors_used);
     free(cluster_buffer);
     fclose(output_file);
 
@@ -255,6 +270,8 @@ int deleteFile(FatTable *fat, char *file_name){
     }
     fat->entities[current_sector].used = available;
     fat->entities[current_sector].eof = not_eof_flag;
+
+    return succeed;
 }
 
 void showFATTable (FatTable *fat){ //Mostra toda a tabela FAT
@@ -277,4 +294,19 @@ void showFATTable (FatTable *fat){ //Mostra toda a tabela FAT
 		printf("\nMemoria utilizada: %d bytes\n", memory_used*sector_size);
 		memory_used = 0;
 	}
+}
+
+double computingTime(int *sectors, int n){// Recebe o tamanho e o array de setores no qual o arquivo esta contido
+    int i;  //control variables
+    double time = 0.0;
+
+    for(i=0; i<(n-1); i++){
+        time += (double) (cluster_size*(average_latency + (transfer_time/sectors_per_track)));
+
+        if((sectors[i+1]-sectors[i])>300)
+            time += average_seek;
+    }
+    time += (double) (4*(average_latency + (transfer_time/sectors_per_track))); //Tempo adicional para leitura do ultimo setor
+
+    return time;
 }
