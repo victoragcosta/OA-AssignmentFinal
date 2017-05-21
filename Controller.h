@@ -79,42 +79,109 @@ typedef struct fattable{ //Defines the disk's FAT Table
 }FatTable;
 
 /**
-*   installDisk();
-*   This function is responsible for the allocation of the memory that will be used to the disk structure
-*   @return : VirtualDisk pointer type, pointing to the just allocated memory area.
+   installDisk();
+   This function is responsible for the allocation of the memory that will be used to the disk structure
+   @return : VirtualDisk pointer type, pointing to the just allocated memory area.
 */
 VirtualDisk* installDisk();
 
 /**
-*   uninstallDisk();
-*   This function does the opposite of installDisk, releasing all the allocated memory for the disk
-*   @args : VirtualDisk pointer type, pointing to the disk to be "destroyed".
+   uninstallDisk();
+   This function does the opposite of installDisk, releasing all the allocated memory for the disk
+   @args : VirtualDisk pointer type, pointing to the disk to be "destroyed".
 */
 void uninstallDisk(VirtualDisk *);
 
 /**
-*   startFat();
-*   Allocates and starts the FAT Table with the appropriated constants
-*   @return : FatTable pointer type, pointing to the just allocated memory area
+   startFat();
+   Allocates and starts the FAT Table with the appropriated constants
+   @return : FatTable pointer type, pointing to the just allocated memory area
 */
 FatTable* startFat();
 
 /**
-*   finishFat();
-*   Releases all the memory used for the FAT Table
-*   @args : FatTable pointer type containing the FAT Table to be "destroyed"
+   finishFat();
+   Releases all the memory used for the FAT Table
+   @args : FatTable pointer type containing the FAT Table to be "destroyed"
 */
 void finishFat(FatTable *);
 
-
+/**
+   createBuffer();
+   Opens a file and creates a buffer with its content
+   @args : string with the filename and an pointer to an integer with the size of the buffer
+   @return : string containing the file
+*/
 unsigned char* createBuffer(char *, int *);
+
+/**
+    findCluster();
+    Finds the next empty cluster
+    @args : FAT Table of the disk
+    @return : Number of the sector where the cluster starts (integer)
+*/
 int findCluster(FatTable *);
+
+/**
+    freeClusters();
+    In case of an error, this function restores the disk to its previous state (before the writing has been started)
+    @args : FAT Table of the disk, the clusters and the amount of clusters that were used in the writing session
+*/
+void freeClusters(FatTable *, int *, int);
+
+/**
+    allocateClusters();
+    Sets all clusters that a file will use
+    @args : FAT Table of the disk, an integer with the amount of clusters needed by the file
+    @return : an array of integers with the number of all clusters
+*/
 int* allocateClusters(FatTable *, int);
+
+/**
+    seekCluster();
+    Locates a sector in the disk
+    @args : integer with the number of the sector
+    @return : an array of integers containing the coordinates of the sector in the disk
+*/
 int* seekCluster(int);
+
+/**
+    writeFile();
+    Provides the interface to write a file
+    @args : Disk pointer, FAT Table pointer, string with the filename
+    @return : a double with the time elapsed to write the file
+*/
 double writeFile(VirtualDisk *, FatTable *, char *);
+
+/**
+    readFile();
+    Provides the interface to read a file
+    @args : Disk pointer, FAT Table pointer, string with the filename
+    @return : a double with the time elapsed to read the file
+*/
 double readFile(VirtualDisk *, FatTable *, char *);
+
+/**
+    deleteFile();
+    Provides the interface to delete a file
+    @args : FAT Table pointer, string with the filename
+    @return : a integer meaning the completeness (or not) of the operation
+*/
 int deleteFile(FatTable *, char *);
+
+/**
+    computingTime();
+    Calculates the time needed to write or read a file
+    @args : array with the clusters used, size of the array
+    @return : double with the time used in the operation
+*/
 double computingTime(int *, int);
+
+/**
+    showFATTable();
+    Prints the FAT Table on the screen
+    @args : FAT Table pointer
+*/
 void showFATTable(FatTable *);
 
 #endif // CONTROLLER_h
